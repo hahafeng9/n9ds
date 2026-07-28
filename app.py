@@ -6,7 +6,7 @@ import logging, ipaddress, threading, aiohttp
 from aiohttp import web
 
 # 环境变量
-UUID = os.environ.get('UUID', 'c202b33e-03d9-406c-9bba-1ca228036028')   # 节点UUID（代理+哪吒共用）
+UUID = os.environ.get('UUID', 'd3de3c38-ba32-43e1-96a4-7d52910bc946')   # 节点UUID（代理+哪吒共用）
 NEZHA_SERVER = os.environ.get('NEZHA_SERVER', '')                        # 哪吒面板地址
 NEZHA_KEY = os.environ.get('NEZHA_KEY', '')                              # 哪吒密钥
 SUB_PATH = os.environ.get('SUB_PATH', 'sub')                             # 订阅路径

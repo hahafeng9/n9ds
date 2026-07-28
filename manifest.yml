@@ -1,13 +1,13 @@
 ---
 applications:
-- name: app                                       # 改成你想要的应用名
+- name: a9sapp                                       # 改成你想要的应用名
   command: python app.py
   buildpacks:
     - python_buildpack
   random-route: true                              # 自动生成唯一路由，例如 app-happy-panda.de.a9s.eu
   health-check-type: port                         # 检测端口，确保 Web 服务存活
   env:
-    UUID: "c202b33e-03d9-406c-9bba-1ca228036028"  # 开启了哪吒v1,请修改UUID
+    UUID: "d3de3c38-ba32-43e1-96a4-7d52910bc946"  # 开启了哪吒v1,请修改UUID
     NEZHA_SERVER: ""              # 哪吒v1填写形式：nz.abc.com:8008 哪吒v0填写形式：nz.abc.com
     NEZHA_KEY: "" # 哪吒v1的NZ_CLIENT_SECRET或v0的agent端口
     SUB_PATH: "sub"                           # 订阅token

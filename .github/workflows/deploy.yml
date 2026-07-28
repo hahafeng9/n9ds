@@ -1,0 +1,105 @@
+name: anynines平台
+
+on:
+  workflow_dispatch:
+
+env:
+  CF_API: "https://api.de.a9s.eu"
+  CF_USER: ${{ secrets.CF_USER }}
+  CF_PASS: ${{ secrets.CF_PASS }}
+
+jobs:
+  deploy:
+    name: anynines平台
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库
+        uses: actions/checkout@v4
+
+      - name: 安装Cloud Foundry CLI
+        run: |
+          wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo apt-key add -
+          echo "deb https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
+          sudo apt-get update
+          sudo apt-get install cf8-cli
+
+      - name: 执行部署
+        run: |
+          cf api "$CF_API"
+          cf auth "$CF_USER" "$CF_PASS"
+
+          # 定位组织和空间
+          ORG=$(cf orgs | awk 'NR>3 {print $1; exit}')
+          cf target -o "$ORG"
+          SPACE=$(cf spaces | awk 'NR>3 {print $1; exit}')
+          if [ -z "$SPACE" ]; then
+            cf create-space dev
+            SPACE="dev"
+          fi
+          cf target -o "$ORG" -s "$SPACE"
+
+          # 清理旧应用 + 孤儿路由
+          echo "Cleaning up old apps..."
+          APPS=$(cf apps | awk 'NR>3 {print $1}')
+          if [ -n "$APPS" ]; then
+            for APP in $APPS; do
+              echo "Deleting app: $APP"
+              cf delete "$APP" -f
+            done
+          fi
+          cf delete-orphaned-routes -f
+
+          # 推送新应用
+          cf push --strategy rolling
+
+          APP_NAME="app"
+          ROUTE=$(cf app "$APP_NAME" | awk '/^routes:/{print $2}')
+          if [ -z "$ROUTE" ]; then
+            echo "Failed to get route"
+            exit 1
+          fi
+          if [[ ! "$ROUTE" =~ ^https?:// ]]; then
+            ROUTE="https://$ROUTE"
+          fi
+          echo "Detected route: $ROUTE"
+
+          # 设置环境变量 DOMAIN（去掉协议和路径）
+          DOMAIN_VALUE=$(echo "$ROUTE" | sed -e 's|https://||' -e 's|http://||' -e 's|/.*||')
+          cf set-env "$APP_NAME" DOMAIN "$DOMAIN_VALUE"
+          echo "DOMAIN set to: $DOMAIN_VALUE"
+
+          # 重启应用使环境变量生效
+          cf restart "$APP_NAME"
+
+          # 导出域名
+          echo "DOMAIN_VALUE=$DOMAIN_VALUE" >> $GITHUB_ENV
+
+          # 从 manifest.yml 中提取 SUB_PATH
+          SUB_PATH=$(awk '/^[[:space:]]*SUB_PATH:/ {print $2}' manifest.yml | tr -d '"' | head -1)
+          if [ -z "$SUB_PATH" ]; then
+            echo "❌ 无法从 manifest.yml 中提取 SUB_PATH，请检查配置！"
+            exit 1
+          fi
+          echo "SUB_PATH=$SUB_PATH" >> $GITHUB_ENV
+          echo "Detected SUB_PATH: $SUB_PATH"
+
+      - name: 打印节点信息
+        run: |
+          SUB_URL="https://${DOMAIN_VALUE}/${SUB_PATH}"
+          echo "📡 订阅链接: $SUB_URL"
+          echo "⏳ 等待应用启动（最多 30 秒）..."
+
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$SUB_URL")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ 服务已就绪"
+              break
+            fi
+            sleep 3
+          done
+
+          echo ""
+          echo "==================== 节点配置 ===================="
+          curl -s "$SUB_URL" | base64 -d 2>/dev/null || echo "解码失败，请手动访问订阅链接"
+          echo ""
+          echo "=================================================="

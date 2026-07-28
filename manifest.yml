@@ -1,0 +1,17 @@
+---
+applications:
+- name: app                                       # 改成你想要的应用名
+  command: python app.py
+  buildpacks:
+    - python_buildpack
+  random-route: true                              # 自动生成唯一路由，例如 app-happy-panda.de.a9s.eu
+  health-check-type: port                         # 检测端口，确保 Web 服务存活
+  env:
+    UUID: "c202b33e-03d9-406c-9bba-1ca228036028"  # 开启了哪吒v1,请修改UUID
+    NEZHA_SERVER: ""              # 哪吒v1填写形式：nz.abc.com:8008 哪吒v0填写形式：nz.abc.com
+    NEZHA_KEY: "" # 哪吒v1的NZ_CLIENT_SECRET或v0的agent端口
+    SUB_PATH: "sub"                           # 订阅token
+    NAME: "Anynines"                              # 节点名称前缀，例如：Anynines
+    AUTO_ACCESS: "false"                          # 是否开启自动访问保活,false为关闭,true为开启,需同时填写DOMAIN变量
+    DEBUG: "false"                                # 调试模式，默认关闭，true开启
+   # DOMAIN: ""                                    由工作流自动填入，不在此处写死

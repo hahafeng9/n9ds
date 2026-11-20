@@ -38,6 +38,9 @@ jobs:
           fi
           cf target -o "$ORG" -s "$SPACE"
 
+          # 确保有开发者权限（a9s 预建的 production 空间可能只有管理角色、没有开发者角色，会导致删/推应用报无权限）
+          cf set-space-role "$CF_USER" "$ORG" "$SPACE" SpaceDeveloper || true
+
           # 清理旧应用 + 孤儿路由
           echo "Cleaning up old apps..."
           APPS=$(cf apps | awk 'NR>3 {print $1}')
